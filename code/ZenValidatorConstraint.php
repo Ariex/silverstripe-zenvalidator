@@ -22,6 +22,8 @@ abstract class ZenValidatorConstraint extends Object {
 	 * */
 	protected $parsleyApplied;
 
+	protected $condition;
+
 	/**
 	 * Set the field this constraint is applied to
 	 * @param FormField $field
@@ -87,10 +89,14 @@ abstract class ZenValidatorConstraint extends Object {
 		if ($this->customMessage) {
 			$this->field->setAttribute(sprintf('data-parsley-%s-message', $this->getConstraintName()), $this->customMessage);
 		}
-        // CheckboxSetField might not have a unique name, so set parsley-multiple attribute
-        if(get_class($this->field) === 'CheckboxSetField') {
-            $this->field->setAttribute('data-parsley-multiple',$this->field->getName());
-        }
+		// CheckboxSetField might not have a unique name, so set parsley-multiple attribute
+		if (get_class($this->field) === 'CheckboxSetField') {
+			$this->field->setAttribute('data-parsley-multiple', $this->field->getName());
+		}
+
+		if ($this->condition) {
+			$this->field->setAttribute('data-parsley-' . $this->getConstraintName() . '-condition', $this->condition);
+		}
 	}
 
 	/**
@@ -103,13 +109,13 @@ abstract class ZenValidatorConstraint extends Object {
 		if ($this->field && $this->customMessage) {
 			$this->field->setAttribute(sprintf('data-parsley-%s-message', $this->getConstraintName()), '');
 		}
-        if(get_class($this->field) === 'CheckboxSetField') {
-            $this->field->setAttribute('data-parsley-multiple','');
-        }
+		if (get_class($this->field) === 'CheckboxSetField') {
+			$this->field->setAttribute('data-parsley-multiple', '');
+		}
 	}
 
 	/**
-	 * Performs php validation on the value 
+	 * Performs php validation on the value
 	 * @param $value
 	 * @return bool
 	 * */
@@ -124,10 +130,19 @@ abstract class ZenValidatorConstraint extends Object {
 		return str_replace('Constraint_', '', $this->class);
 	}
 
+	public function setCondition($Condition) {
+		$this->condition = $Condition;
+		return $this;
+	}
+
+	protected function execCondition() {
+		r($this->field->getName());
+		return RuleExecutor::create()->Execute($this->condition, $this->field->getForm()->Fields());
+	}
 }
 
 /**
- * Constraint_required 
+ * Constraint_required
  * Basic required field form validation
  * */
 class Constraint_required extends ZenValidatorConstraint {
@@ -145,7 +160,7 @@ class Constraint_required extends ZenValidatorConstraint {
 	}
 
 	public function validate($value) {
-		return $value != '';
+		return !$this->execCondition() || $value != '';
 	}
 
 	public function getDefaultMessage() {
@@ -156,7 +171,7 @@ class Constraint_required extends ZenValidatorConstraint {
 
 /**
  * Constraint_length
- * Constrain a field value to be a of a min length, max length or between a range  
+ * Constrain a field value to be a of a min length, max length or between a range
  *
  * @example Constraint_length::create('min', 5); // minimum length of 5 characters
  * @example Constraint_length::create('max', 5); // maximum length of 5 characters
@@ -164,8 +179,8 @@ class Constraint_required extends ZenValidatorConstraint {
  * */
 class Constraint_length extends ZenValidatorConstraint {
 
-	const MIN = 'min';
-	const MAX = 'max';
+	const MIN   = 'min';
+	const MAX   = 'max';
 	const RANGE = 'range';
 
 	/**
@@ -225,8 +240,9 @@ class Constraint_length extends ZenValidatorConstraint {
 	}
 
 	function validate($value) {
-		if (!$value)
+		if (!$value) {
 			return true;
+		}
 
 		switch ($this->type) {
 			case 'min':
@@ -261,8 +277,8 @@ class Constraint_length extends ZenValidatorConstraint {
  * */
 class Constraint_check extends ZenValidatorConstraint {
 
-	const MIN = 'min';
-	const MAX = 'max';
+	const MIN   = 'min';
+	const MAX   = 'max';
 	const RANGE = 'range';
 
 	/**
@@ -322,10 +338,10 @@ class Constraint_check extends ZenValidatorConstraint {
 	}
 
 	function validate($value) {
-        $array = array_filter(explode(',', $value));
-        if(empty($array)) {
-            return; //you should use required instead
-        }
+		$array = array_filter(explode(',', $value));
+		if (empty($array)) {
+			return; //you should use required instead
+		}
 
 		switch ($this->type) {
 			case 'min':
@@ -352,16 +368,16 @@ class Constraint_check extends ZenValidatorConstraint {
 
 /**
  * Constraint_value
- * Constrain a field value to be a of a min value, max value or between a range  
+ * Constrain a field value to be a of a min value, max value or between a range
  *
  * @example Constraint_value::create('min', 5); // minimum value of 5
- * @example Constraint_value::create('max', 5); // maximum value of 5 
+ * @example Constraint_value::create('max', 5); // maximum value of 5
  * @example Constraint_value::create('range', 5, 10); // value between 5 and 10 characters
  * */
 class Constraint_value extends ZenValidatorConstraint {
 
-	const MIN = 'min';
-	const MAX = 'max';
+	const MIN   = 'min';
+	const MAX   = 'max';
 	const RANGE = 'range';
 
 	/**
@@ -421,8 +437,9 @@ class Constraint_value extends ZenValidatorConstraint {
 	}
 
 	function validate($value) {
-		if (!$value)
+		if (!$value) {
 			return true;
+		}
 
 		switch ($this->type) {
 			case 'min':
@@ -449,7 +466,7 @@ class Constraint_value extends ZenValidatorConstraint {
 
 /**
  * Constraint_regex
- * Constrain a field to match a regular expression  
+ * Constrain a field to match a regular expression
  *
  * @example Constraint_regex::create("/^#(?:[0-9a-fA-F]{3}){1,2}$/"); // value must be a valid hex color
  * */
@@ -483,8 +500,10 @@ class Constraint_regex extends ZenValidatorConstraint {
 	}
 
 	function validate($value) {
-		if (!$value)
+		if (!$value) {
 			return true;
+		}
+
 		return preg_match($this->regex, $value);
 	}
 
@@ -536,9 +555,9 @@ class Constraint_remote extends ZenValidatorConstraint {
 	 * You can show frontend server-side specific error messages by returning { "error": "your custom message" } or { "message": "your custom message" }
 	 * */
 	function __construct($url, $params = array(), $options = true, $validator = null) {
-		$this->url = $url;
-		$this->params = $params;
-		$this->options = $options;
+		$this->url       = $url;
+		$this->params    = $params;
+		$this->options   = $options;
 		$this->validator = $validator;
 
 		if (is_array($options) && isset($this->options['type'])) {
@@ -552,40 +571,51 @@ class Constraint_remote extends ZenValidatorConstraint {
 		parent::applyParsley();
 		$url = count($this->params) ? $this->url . '?' . http_build_query($this->params) : $this->url;
 		$this->field->setAttribute('data-parsley-remote', $url);
-		if (!empty($this->options))
+		if (!empty($this->options)) {
 			$this->field->setAttribute('data-parsley-remote-options', json_encode($this->options));
-		if ($this->validator)
+		}
+
+		if ($this->validator) {
 			$this->field->setAttribute('data-parsley-remote-validator', $this->validator);
+		}
+
 	}
 
 	public function removeParsley() {
 		parent::removeParsley();
 		$this->field->setAttribute('data-parsley-remote', '');
-		if ($this->field->getAttribute('data-parsley-remote-options'))
+		if ($this->field->getAttribute('data-parsley-remote-options')) {
 			$this->field->setAttribute('data-parsley-remote-options', '');
-		if ($this->field->getAttribute('data-parsley-remote-validator'))
+		}
+
+		if ($this->field->getAttribute('data-parsley-remote-validator')) {
 			$this->field->setAttribute('data-parsley-remote-validator', '');
+		}
+
 	}
 
 	function validate($value) {
-		if (!$value)
+		if (!$value) {
 			return true;
+		}
 
 		$this->params[$this->field->getName()] = $value;
-		$query = http_build_query($this->params);
-		$url = $this->method == 'GET' ? $this->url . '?' . $query : $this->url;
+		$query                                 = http_build_query($this->params);
+		$url                                   = $this->method == 'GET' ? $this->url . '?' . $query : $this->url;
 
-		// If the url is a relative one, use Director::test() to get the response 
+		// If the url is a relative one, use Director::test() to get the response
 		if (Director::is_relative_url($url)) {
-			$url = Director::makeRelative($url);
+			$url      = Director::makeRelative($url);
 			$postVars = $this->method == 'POST' ? $this->params : null;
 			$response = Director::test($url, $postVars = null, Controller::curr()->getSession(), $this->method);
-			$result = ($response->getStatusCode() == 200) ? $response->getBody() : 0;
+			$result   = ($response->getStatusCode() == 200) ? $response->getBody() : 0;
 			// Otherwise CURL to remote url
 		} else {
 			$ch = curl_init();
-			if ($this->method == 'POST')
+			if ($this->method == 'POST') {
 				curl_setopt($ch, CURLOPT_POSTFIELDS, $query);
+			}
+
 			curl_setopt($ch, CURLOPT_URL, $url);
 			curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -629,7 +659,7 @@ class Constraint_remote extends ZenValidatorConstraint {
 
 /**
  * Constraint_type
- * Constrain a field value to be a of a min value, max value or between a range  
+ * Constrain a field value to be a of a min value, max value or between a range
  *
  * @example Constraint_type::create('email'); // require valid email
  * @example Constraint_type::create('url'); // require valid url
@@ -640,11 +670,11 @@ class Constraint_remote extends ZenValidatorConstraint {
  * */
 class Constraint_type extends ZenValidatorConstraint {
 
-	const EMAIL = 'email';
-	const URL = 'url';
-	const NUMBER = 'number';
-	const INTEGER = 'integer';
-	const DIGITS = 'digits';
+	const EMAIL    = 'email';
+	const URL      = 'url';
+	const NUMBER   = 'number';
+	const INTEGER  = 'integer';
+	const DIGITS   = 'digits';
 	const ALPHANUM = 'alphanum';
 
 	/**
@@ -671,9 +701,12 @@ class Constraint_type extends ZenValidatorConstraint {
 	}
 
 	function validate($value) {
-		if (!$value)
+		if (!$value) {
 			return true;
-
+		}
+		if (!$this->execCondition()) {
+			return true;
+		}
 		switch ($this->type) {
 			case 'url':
 				return filter_var($value, FILTER_VALIDATE_URL);
@@ -707,11 +740,14 @@ class Constraint_type extends ZenValidatorConstraint {
 		}
 	}
 
+	function getConstraintName() {
+		return $this->type;
+	}
 }
 
 /**
  * Constraint_equalto
- * Constrain a field value to be the same as another field 
+ * Constrain a field value to be the same as another field
  *
  * @example Constraint_equalto::create('OtherField');
  * */
@@ -768,10 +804,10 @@ class Constraint_equalto extends ZenValidatorConstraint {
  * */
 class Constraint_comparison extends ZenValidatorConstraint {
 
-	const GREATER = 'gt';
+	const GREATER          = 'gt';
 	const GREATER_OR_EQUAL = 'gte';
-	const LESS = 'lt';
-	const LESS_OR_EQUAL = 'lte';
+	const LESS             = 'lt';
+	const LESS_OR_EQUAL    = 'lte';
 
 	/**
 	 * @var string
@@ -779,7 +815,7 @@ class Constraint_comparison extends ZenValidatorConstraint {
 	protected $targetField;
 
 	/**
-	 * @var type 
+	 * @var type
 	 * */
 	protected $type;
 
@@ -789,7 +825,7 @@ class Constraint_comparison extends ZenValidatorConstraint {
 	 * */
 	function __construct($type, $field) {
 		$this->loadExtra('comparison');
-		$this->type = $type;
+		$this->type        = $type;
 		$this->targetField = $field;
 		parent::__construct();
 	}
@@ -845,7 +881,6 @@ class Constraint_comparison extends ZenValidatorConstraint {
 
 }
 
-
 /**
  * Constraint_words
  * Validates the number of words in the field
@@ -858,7 +893,7 @@ class Constraint_words extends ZenValidatorConstraint {
 
 	const MINWORDS = 'minwords';
 	const MAXWORDS = 'maxwords';
-	const WORDS = 'words';
+	const WORDS    = 'words';
 
 	/**
 	 * @var int
@@ -870,7 +905,7 @@ class Constraint_words extends ZenValidatorConstraint {
 	protected $val2;
 
 	/**
-	 * @var type 
+	 * @var type
 	 * */
 	protected $type;
 
@@ -879,12 +914,12 @@ class Constraint_words extends ZenValidatorConstraint {
 	 * @param int $val1 number of words
 	 * @param int $val2 maximum number of words
 	 * */
-	function __construct($type, $val1,$val2 = null) {
+	function __construct($type, $val1, $val2 = null) {
 		$this->loadExtra('words');
 		$this->type = $type;
 		$this->val1 = $val1;
 		$this->val2 = $val2;
-		if($type == self::WORDS && $val2 === null) {
+		if ($type == self::WORDS && $val2 === null) {
 			throw new Exception('You must specify a range of words');
 		}
 		parent::__construct();
@@ -893,7 +928,7 @@ class Constraint_words extends ZenValidatorConstraint {
 	public function applyParsley() {
 		parent::applyParsley();
 		$value = $this->val1;
-		if($this->val2) {
+		if ($this->val2) {
 			$value = '[' . $value . ',' . $this->val2 . ']';
 		}
 		$this->field->setAttribute('data-parsley-' . $this->type, $value);
