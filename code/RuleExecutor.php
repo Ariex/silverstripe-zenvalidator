@@ -13,6 +13,8 @@ interface IOperatable {
 
 interface IExtendFunctionSupportable {
 	public function length();
+	public function lower();
+	public function upper();
 }
 
 interface IRuleNodeFactory {
@@ -22,15 +24,18 @@ interface IRuleNodeFactory {
 abstract class RuleNode extends Object implements IOperatable, IExtendFunctionSupportable {
 	protected $RawValue;
 
-	protected function __construct($rawValue) {
+	public function __construct($rawValue) {
 		$this->RawValue = $rawValue;
 	}
 
 	public static function CreateNode($rawValue) {
+		if (is_null($rawValue)) {
+			$rawValue = "NULL";
+		}
 		if (is_bool($rawValue)) {
 			$rawValue = $rawValue ? "True" : "False";
 		}
-		if (is_string($rawValue)) {
+		if (is_string($rawValue) || is_numeric($rawValue)) {
 			return StringRuleNode::create($rawValue);
 		} else if (is_array($rawValue)) {
 			return ArrayRuleNode::create($rawValue);
@@ -81,6 +86,14 @@ abstract class RuleNode extends Object implements IOperatable, IExtendFunctionSu
 	public function length() {
 		throw new Exception($this->getNodeType() . ' does not support this method - length.');
 	}
+
+	public function lower() {
+		throw new Exception($this->getNodeType() . ' does not support this method - length.');
+	}
+
+	public function upper() {
+		throw new Exception($this->getNodeType() . ' does not support this method - length.');
+	}
 }
 
 class StringRuleNode extends RuleNode {
@@ -89,6 +102,18 @@ class StringRuleNode extends RuleNode {
 	}
 
 	public function Equals($right) {
+		$strRight = (string) $right;
+		// r($this->RawValue);
+		// r($right);
+		// r((string) $right);
+		// r($this->RawValue == (string) $right);
+		// if ($this->RawValue == 1 && strtolower($strRight) == 'true') {
+		// 	r("return for true");
+		// 	return true;
+		// } else if ($this->RawValue == 0 && strtolower($strRight) == 'false') {
+		// 	r("return for false");
+		// 	return true;
+		// }
 		return $this->RawValue == (string) $right;
 	}
 
@@ -131,6 +156,14 @@ class StringRuleNode extends RuleNode {
 	/* additional functions can be accessed after a dot */
 	public function length() {
 		return strlen($this->RawValue);
+	}
+
+	public function lower() {
+		return strtolower($this->RawValue);
+	}
+
+	public function upper() {
+		return strtoupper($this->RawValue);
 	}
 }
 
@@ -177,6 +210,14 @@ class RuleExecutor extends Object {
 			}
 			$opt = $mres[2][$i];
 			$val = $f->Value();
+			if ($f instanceof CheckBoxField) {
+				$val = (bool) $val;
+			}
+			if ($f instanceof DateField) {
+				$val = $f->dataValue();
+			}
+			// r($val);
+			// r(is_null($val));
 			// if (!is_string($val)) {
 			// 	return true;
 			// }
@@ -198,19 +239,15 @@ class RuleExecutor extends Object {
 				throw new Exception('Unsupported value at left.');
 			}
 			// $left  = strtolower((string) $val);
-			$right = strtolower($mres[3][$i]);
+			$right = $mres[3][$i];
 			// r($opt);
 			$func = function () use ($opt, $left, $right, $parts) {
 				if (sizeof($parts) == 2) {
 					if (!($left instanceof IExtendFunctionSupportable)) {
 						throw new Exception('$Left does not support extension method');
 					}
-					switch (strtolower($parts[1])) {
-						case "length":
-							$left = RuleNode::CreateNode($left->length());
-							break;
-						default:
-							// do nothing at here...
+					if (method_exists($left, strtolower($parts[1]))) {
+						$left = RuleNode::CreateNode(call_user_func(array($left, strtolower($parts[1]))));
 					}
 				}
 				// $left  = strtolower($left);
@@ -261,7 +298,7 @@ class RuleExecutor extends Object {
 		// r($funcs);
 		// r(implode(',', array_map(function ($v) {
 		// 	return $v['Alias'];
-		// }, $funcMap)));
+		// }, $funcMap)), 'return ' . $statement . ';');
 		$stateFunc = create_function(implode(',', array_map(function ($v) {
 			return $v['Alias'];
 		}, $funcMap)), 'return ' . $statement . ';');
