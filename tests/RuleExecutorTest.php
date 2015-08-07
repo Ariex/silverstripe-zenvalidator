@@ -6,10 +6,24 @@ class RuleExecutorTest extends SapphireTest {
 	protected $re     = null;
 
 	protected function True($statement, $message = null) {
-		$this->assertTrue($this->re->Execute($statement, $this->fields), $message || $statement);
+		$dtFactory = DateTimeNodeFactory::create();
+		$aFactory  = ArrayNodeFactory::create();
+		$this->assertTrue($this->re->Execute($statement, $this->fields, $dtFactory, $aFactory), $message || $statement);
 	}
 	protected function False($statement, $message = null) {
-		$this->assertFalse($this->re->Execute($statement, $this->fields), $message || $statement);
+		$dtFactory = DateTimeNodeFactory::create();
+		$aFactory  = ArrayNodeFactory::create();
+		$this->assertFalse($this->re->Execute($statement, $this->fields, $dtFactory, $aFactory), $message || $statement);
+	}
+	protected function SetValue($mixed, $value = null) {
+		if (is_array($mixed)) {
+			foreach ($mixed as $key => $value) {
+				$this->fields->dataFieldByName($key)->SetValue($value);
+			}
+		} else {
+			$this->fields->dataFieldByName($mixed)->SetValue($value);
+		}
+		return $this;
 	}
 
 	private function Fields() {
@@ -197,15 +211,30 @@ class RuleExecutorTest extends SapphireTest {
 		$this->False("datefield == 2015-08-22");
 		$this->fields->dataFieldByName("datefield")->setValue("Aug 22, 2015");
 		$this->True("datefield == 2015-08-22");
+		$this->True("datefield > 2015-08-21");
+		$this->True("datefield >= 2015-08-22");
+		$this->True("datefield < 2015-08-23");
+		$this->True("datefield <= 2015-08-23");
+
+		$this->False("!(datefield == 2015-08-22)");
+		$this->False("datefield > 2015-08-23");
+		$this->False("datefield >= 2015-08-23");
+		$this->False("datefield < 2015-08-21");
+		$this->False("datefield <= 2015-08-21");
 	}
 
 	public function testTimeField() {
 		$this->False("timeField == 1:10:00 PM");
 		$this->fields->dataFieldByName("timeField")->setValue("13:10:00");
 		$this->True("timeField == 1:10:00 PM");
+
+		$this->True("timeField > 11:10:00 AM");
+		$this->False("timeField < 1:10:00 PM");
+		$this->True("timeField < 3:10:00 PM");
+		$this->True("timeField < 15:10:00");
 	}
 
-	/// test build-in extension functions
+	///// test build-in extension functions
 	public function testLengthFunction() {
 		$this->False("Title.length > 3");
 		$this->fields->dataFieldByName("Title")->setValue("Doctor");
@@ -241,5 +270,17 @@ class RuleExecutorTest extends SapphireTest {
 		$this->True('IsTrue == True && Title.length >= 0 || CheckboxSet == Opt1');
 		$this->False('IsTrue == True && Title.length > 0 || CheckboxSet == Opt1');
 		$this->False('IsTrue == False && Title.length >= 0 || CheckboxSet == Opt1');
+	}
+
+	public function testComplexRule2() {
+		$this->SetValue(array(
+			'IsTrue'      => true,
+			'Title'       => '123456789',
+			'Subtitle'    => 'sub title',
+			'CheckboxSet' => array('Opt4'),
+		));
+		$this->True('IsTrue == True && (Title.length == 8 || Subtitle == sub title) && CheckboxSet == Opt4');
+		$this->False('IsTrue == True && (Title.length == 8 || Subtitle == sub title) && CheckboxSet == Opt3');
+		$this->False('IsTrue == True && (Title.length == 8 || Subtitle == sub  title) && CheckboxSet == Opt4');
 	}
 }

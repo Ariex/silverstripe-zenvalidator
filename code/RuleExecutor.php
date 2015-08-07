@@ -1,6 +1,6 @@
 <?php
 
-interface IOperatable {
+interface INodeComparable {
 	public function Equals($right);
 	public function GreaterThan($right);
 	public function EqualsOrGreaterThan($right);
@@ -18,10 +18,14 @@ interface IExtendFunctionSupportable {
 }
 
 interface IRuleNodeFactory {
+	// create left node
 	public function CreateNode($rawValue);
+
+	// create right node
+	public function ConvertRightValue($right);
 }
 
-abstract class RuleNode extends Object implements IOperatable, IExtendFunctionSupportable {
+abstract class RuleNode extends Object implements INodeComparable, IExtendFunctionSupportable {
 	protected $RawValue;
 
 	public function __construct($rawValue) {
@@ -37,9 +41,13 @@ abstract class RuleNode extends Object implements IOperatable, IExtendFunctionSu
 		}
 		if (is_string($rawValue) || is_numeric($rawValue)) {
 			return StringRuleNode::create($rawValue);
-		} else if (is_array($rawValue)) {
-			return ArrayRuleNode::create($rawValue);
 		}
+		//  else if (is_array($rawValue)) {
+		// 	return ArrayRuleNode::create($rawValue);
+		// }
+		//  else if ($rawValue instanceof DateTime) {
+		// 	return DateTimeRuleNode::create($rawValue);
+		// }
 		return null;
 	}
 
@@ -167,38 +175,12 @@ class StringRuleNode extends RuleNode {
 	}
 }
 
-class ArrayRuleNode extends RuleNode {
-	public function getNodeType() {
-		return 'Array';
-	}
-
-	public function Equals($right) {
-		// r($right);
-		// r($this->RawValue);
-		// $arr = array("Opt3", "Opt2");
-		// r(in_array($right, $this->RawValue));
-		// r(in_array("Opt3", $arr));
-		// r($right == "Opt3 ");
-		return in_array($right, $this->RawValue);
-	}
-
-	public function Contains($right) {
-		return $this->Equals($right);
-	}
-
-	/* additional functions can be accessed after a dot */
-	public function length() {
-		return sizeof($this->RawValue);
-	}
-}
-
 class RuleExecutor extends Object {
 	public function Execute($statement, $fields, ...$nodeFactories) {
 		// r("orig statement {$statement}");
 		if (strlen($statement) < 1) {
 			return true;
 		}
-		// $regex  = '/(?:\s*([^ =>!<$~^()]+)\s*((?:==|!=|\>=|\<=|\>|\<))\s*([^ =()]+)\s*(&&|\|\|){0,1}){1,}?/';
 		$regex     = '/(?:\s*([^ =>!<$~^()]+)\s*((?:==|!=|\>=|\<=|\>|\<))\s*([^=()&|]+)\s*(&&|\|\|){0,1}){1,}?/';
 		$knownOpts = array('==');
 		preg_match_all($regex, $statement, $matches);
@@ -220,17 +202,22 @@ class RuleExecutor extends Object {
 			if ($f instanceof CheckBoxField) {
 				$val = (bool) $val;
 			}
-			if ($f instanceof DateField) {
-				$val = $f->dataValue();
+			if ($f instanceof DateField || $f instanceof TimeField) {
+				$val = new DateTime($f->dataValue());
+				if (!($val instanceof DateTime)) {
+					$val = null;
+				}
 			}
 			// r($val);
 			// r(is_null($val));
 			// if (!is_string($val)) {
 			// 	return true;
 			// }
+
 			// different type of controls have different type of value
 			// for textboxfield it is just a string, bot checkboxsetfield, it is an array
-			$left = RuleNode::CreateNode($val);
+			$left        = RuleNode::CreateNode($val);
+			$currFactory = null;
 			if ($left == null && $nodeFactories != null) {
 				foreach ($nodeFactories as $factory) {
 					if (!($factory instanceof IRuleNodeFactory)) {
@@ -238,15 +225,27 @@ class RuleExecutor extends Object {
 					}
 					$left = $factory->CreateNode($val);
 					if ($left != null) {
+						$currFactory = $factory;
 						break;
 					}
 				}
 			}
+			// r($left);
 			if ($left == null) {
 				throw new Exception('Unsupported value at left.');
 			}
 			// $left  = strtolower((string) $val);
 			$right = trim($mres[3][$i], ' ');
+			// if ($val instanceof DateTime && strtolower($right) != "null") {
+			// 	$right = new DateTime($right);
+			// 	if (!($right instanceof DateTime)) {
+			// 		throw new Exception("{right} is not a valid datetime string (Y-m-d).");
+			// 	}
+			// }
+			// r($currFactory);
+			if ($currFactory != null) {
+				$right = $currFactory->ConvertRightValue($right);
+			}
 			// r($opt);
 			$func = function () use ($opt, $left, $right, $parts) {
 				if (sizeof($parts) == 2) {
@@ -260,7 +259,7 @@ class RuleExecutor extends Object {
 				// $left  = strtolower($left);
 				// $right = strtolower($right);
 				// r("{$left} {$opt} {$right}");
-				if (!($left instanceof IOperatable)) {
+				if (!($left instanceof INodeComparable)) {
 					throw new Exception('$Left is not a supported type.');
 				}
 				// r($right);
@@ -289,6 +288,7 @@ class RuleExecutor extends Object {
 			};
 
 			$logicOpt = $mres[4][$i];
+			// r(trim(substr($mres[0][$i], 0, strlen($mres[0][$i]) - strlen($logicOpt)), " "));
 			array_push($funcMap, array(
 				'Key'   => trim(substr($mres[0][$i], 0, strlen($mres[0][$i]) - strlen($logicOpt)), " "),
 				'Alias' => "\$Func{$i}",
