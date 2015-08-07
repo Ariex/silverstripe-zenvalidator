@@ -173,6 +173,12 @@ class ArrayRuleNode extends RuleNode {
 	}
 
 	public function Equals($right) {
+		// r($right);
+		// r($this->RawValue);
+		// $arr = array("Opt3", "Opt2");
+		// r(in_array($right, $this->RawValue));
+		// r(in_array("Opt3", $arr));
+		// r($right == "Opt3 ");
 		return in_array($right, $this->RawValue);
 	}
 
@@ -192,7 +198,8 @@ class RuleExecutor extends Object {
 		if (strlen($statement) < 1) {
 			return true;
 		}
-		$regex     = '/(?:\s*([^ =>!<$~^()]+)\s*((?:==|!=|\>=|\<=|\>|\<))\s*([^ =()]+)\s*(&&|\|\|){0,1}){1,}?/';
+		// $regex  = '/(?:\s*([^ =>!<$~^()]+)\s*((?:==|!=|\>=|\<=|\>|\<))\s*([^ =()]+)\s*(&&|\|\|){0,1}){1,}?/';
+		$regex     = '/(?:\s*([^ =>!<$~^()]+)\s*((?:==|!=|\>=|\<=|\>|\<))\s*([^=()&|]+)\s*(&&|\|\|){0,1}){1,}?/';
 		$knownOpts = array('==');
 		preg_match_all($regex, $statement, $matches);
 		$mres            = $matches ? $matches : array();
@@ -239,7 +246,7 @@ class RuleExecutor extends Object {
 				throw new Exception('Unsupported value at left.');
 			}
 			// $left  = strtolower((string) $val);
-			$right = $mres[3][$i];
+			$right = trim($mres[3][$i], ' ');
 			// r($opt);
 			$func = function () use ($opt, $left, $right, $parts) {
 				if (sizeof($parts) == 2) {
@@ -256,6 +263,7 @@ class RuleExecutor extends Object {
 				if (!($left instanceof IOperatable)) {
 					throw new Exception('$Left is not a supported type.');
 				}
+				// r($right);
 				switch ($opt) {
 					case "==":
 						return $left->Equals($right);
@@ -296,6 +304,8 @@ class RuleExecutor extends Object {
 			return $val['Func'];
 		}, $funcMap);
 		// r($funcs);
+		// r($funcs[0]->__invoke());
+		// r($funcs[1]->__invoke());
 		// r(implode(',', array_map(function ($v) {
 		// 	return $v['Alias'];
 		// }, $funcMap)), 'return ' . $statement . ';');

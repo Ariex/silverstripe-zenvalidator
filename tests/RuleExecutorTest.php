@@ -199,6 +199,12 @@ class RuleExecutorTest extends SapphireTest {
 		$this->True("datefield == 2015-08-22");
 	}
 
+	public function testTimeField() {
+		$this->False("timeField == 1:10:00 PM");
+		$this->fields->dataFieldByName("timeField")->setValue("13:10:00");
+		$this->True("timeField == 1:10:00 PM");
+	}
+
 	/// test build-in extension functions
 	public function testLengthFunction() {
 		$this->False("Title.length > 3");
@@ -221,9 +227,9 @@ class RuleExecutorTest extends SapphireTest {
 	///// complex rule test cases
 	public function testCheckBoxSetFieldWithComplexConditions() {
 		$this->fields->dataFieldByName('CheckboxSet')->setValue(array('Opt3', 'Opt2'));
-		$this->True('CheckboxSet == Opt3 || CheckboxSet == Opt1', 'CheckboxSet == Opt3 || CheckboxSet == Opt1');
-		$this->True('CheckboxSet == Opt3 && CheckboxSet == Opt2', 'CheckboxSet == Opt3 && CheckboxSet == Opt2');
-		$this->False('(CheckboxSet == Opt3 || CheckboxSet == Opt2) && CheckboxSet == Opt1', '(CheckboxSet == Opt3 || CheckboxSet == Opt2) && CheckboxSet == Opt1');
+		$this->True('CheckboxSet == Opt3 || CheckboxSet == Opt1');
+		$this->True('CheckboxSet == Opt3 && CheckboxSet == Opt2');
+		$this->False('(CheckboxSet == Opt3 || CheckboxSet == Opt2) && CheckboxSet == Opt1');
 	}
 
 	public function testComplexRule1() {
@@ -234,8 +240,6 @@ class RuleExecutorTest extends SapphireTest {
 		$this->True('IsTrue == True && Title.length >= 0 || CheckboxSet == Opt2');
 		$this->True('IsTrue == True && Title.length >= 0 || CheckboxSet == Opt1');
 		$this->False('IsTrue == True && Title.length > 0 || CheckboxSet == Opt1');
-		// r($this->fields->dataFieldByName('IsTrue')->Value());
-		// r($this->re->Execute('IsTrue == False', $this->fields));
 		$this->False('IsTrue == False && Title.length >= 0 || CheckboxSet == Opt1');
 	}
 }
