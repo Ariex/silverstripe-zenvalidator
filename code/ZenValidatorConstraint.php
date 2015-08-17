@@ -149,7 +149,10 @@ abstract class ZenValidatorConstraint extends Object {
 	 * @return bool
 	 */
 	protected function execCondition() {
-		return RuleEvaluator::create()->Execute($this->condition, $this->field->getForm()->Fields());
+		if (class_exists('RuleEvaluator')) {
+			return RuleEvaluator::create()->Execute($this->condition, $this->field->getForm()->Fields());
+		}
+		return true;
 	}
 }
 
