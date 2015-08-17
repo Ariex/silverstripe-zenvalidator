@@ -262,9 +262,13 @@ class ZenValidator extends Validator {
 		if (get_class($this->form->buttonClicked()) === 'FormActionNoValidation') {
 			return $valid;
 		}
-
 		// validate against form field validators
 		$fields = $this->form->Fields();
+		foreach ($data as $d => $dv) {
+			if ($field = $fields->dataFieldByName($d)) {
+				$field->setValue($dv);
+			}
+		}
 		foreach ($fields as $field) {
 			$valid = ($field->validate($this) && $valid);
 		}

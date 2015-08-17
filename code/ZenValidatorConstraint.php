@@ -22,6 +22,9 @@ abstract class ZenValidatorConstraint extends Object {
 	 * */
 	protected $parsleyApplied;
 
+	/**
+	 * @var condition
+	 */
 	protected $condition;
 
 	/**
@@ -130,14 +133,23 @@ abstract class ZenValidatorConstraint extends Object {
 		return str_replace('Constraint_', '', $this->class);
 	}
 
+	/**
+	 * store conditions
+	 * @return ZenValidatorConstraint instance for chain command
+	 */
 	public function setCondition($Condition) {
+		// r($this->getConstraintName());
 		$this->condition = $Condition;
+		// r($this->condition);
 		return $this;
 	}
 
+	/**
+	 * execure the condition stored in this instance
+	 * @return bool
+	 */
 	protected function execCondition() {
-		r($this->field->getName());
-		return RuleExecutor::create()->Execute($this->condition, $this->field->getForm()->Fields());
+		return RuleEvaluator::create()->Execute($this->condition, $this->field->getForm()->Fields());
 	}
 }
 
@@ -160,6 +172,8 @@ class Constraint_required extends ZenValidatorConstraint {
 	}
 
 	public function validate($value) {
+		// r($value);
+		// r($this->field->getForm()->fields->dataFieldByName('Title')->Value());
 		return !$this->execCondition() || $value != '';
 	}
 
@@ -241,6 +255,10 @@ class Constraint_length extends ZenValidatorConstraint {
 
 	function validate($value) {
 		if (!$value) {
+			return true;
+		}
+
+		if (!$this->execCondition()) {
 			return true;
 		}
 
@@ -343,6 +361,10 @@ class Constraint_check extends ZenValidatorConstraint {
 			return; //you should use required instead
 		}
 
+		if (!$this->execCondition()) {
+			return true;
+		}
+
 		switch ($this->type) {
 			case 'min':
 				return count($array) >= $this->val1;
@@ -441,6 +463,10 @@ class Constraint_value extends ZenValidatorConstraint {
 			return true;
 		}
 
+		if (!$this->execCondition()) {
+			return true;
+		}
+
 		switch ($this->type) {
 			case 'min':
 				return (int) $value >= $this->val1;
@@ -501,6 +527,10 @@ class Constraint_regex extends ZenValidatorConstraint {
 
 	function validate($value) {
 		if (!$value) {
+			return true;
+		}
+
+		if (!$this->execCondition()) {
 			return true;
 		}
 
@@ -596,6 +626,10 @@ class Constraint_remote extends ZenValidatorConstraint {
 
 	function validate($value) {
 		if (!$value) {
+			return true;
+		}
+
+		if (!$this->execCondition()) {
 			return true;
 		}
 
@@ -784,6 +818,9 @@ class Constraint_equalto extends ZenValidatorConstraint {
 	}
 
 	function validate($value) {
+		if (!$this->execCondition()) {
+			return true;
+		}
 		return $this->getTargetField()->dataValue() == $value;
 	}
 
@@ -848,6 +885,9 @@ class Constraint_comparison extends ZenValidatorConstraint {
 	}
 
 	function validate($value) {
+		if (!$this->execCondition()) {
+			return true;
+		}
 		switch ($this->type) {
 			//Validates that the value is greater than another field's one
 			case self::GREATER:
@@ -940,6 +980,9 @@ class Constraint_words extends ZenValidatorConstraint {
 	}
 
 	function validate($value) {
+		if (!$this->execCondition()) {
+			return true;
+		}
 		$count = str_word_count($value);
 		switch ($this->type) {
 			//Validates that the value have at least a certain amount of words
@@ -995,6 +1038,9 @@ class Constraint_date extends ZenValidatorConstraint {
 	}
 
 	function validate($value) {
+		if (!$this->execCondition()) {
+			return true;
+		}
 		return preg_match('/^(\d{4})\D?(0[1-9]|1[0-2])\D?([12]\d|0[1-9]|3[01])$/', $value);
 	}
 
