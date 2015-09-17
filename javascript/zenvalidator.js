@@ -28,7 +28,7 @@
 						$(this).removeData();
 					});
 					
-        			$(this).parsley({
+        			$(this).conditionalParsley({
             				excluded: 'input[type=button], input[type=submit], input[type=reset], input[type=hidden], .ignore-validation',
 							errorsContainer: function (el) {
 								return el.$element.closest(".field");

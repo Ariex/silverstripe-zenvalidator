@@ -162,6 +162,10 @@ abstract class ZenValidatorConstraint extends Object {
  * */
 class Constraint_required extends ZenValidatorConstraint {
 
+	public function __construct($condition = null) {
+		$this->setCondition($condition);
+	}
+
 	public function applyParsley() {
 		parent::applyParsley();
 		$this->field->setAttribute('data-parsley-required', 'true');
@@ -182,6 +186,10 @@ class Constraint_required extends ZenValidatorConstraint {
 
 	public function getDefaultMessage() {
 		return _t('ZenValidator.REQUIRED', 'This field is required');
+	}
+
+	public function getConstraintName() {
+		return 'required';
 	}
 
 }
