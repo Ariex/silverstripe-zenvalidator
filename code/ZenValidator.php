@@ -79,6 +79,8 @@ class ZenValidator extends Validator {
 		$this->parsleyEnabled = true;
 		Requirements::javascript(THIRDPARTY_DIR . '/jquery/jquery.js');
 		Requirements::javascript(ZENVALIDATOR_PATH . '/javascript/parsley/parsley.remote.js');
+		Requirements::javascript(ZENVALIDATOR_PATH . '/javascript/parsley/browser-polyfill.js');
+		Requirements::javascript(ZENVALIDATOR_PATH . '/javascript/parsley/RuleEvaluator.dist.js');
 		Requirements::javascript(ZENVALIDATOR_PATH . '/javascript/parsley/parsley.conditions.js');
 
 		$lang = i18n::get_lang_from_locale(i18n::get_locale());
